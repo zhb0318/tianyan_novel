@@ -1,204 +1,137 @@
-import requests
-import logging
-import asyncio
-from bs4 import  BeautifulSoup
-import  time
+import json
+from bs4 import BeautifulSoup
+import time
+import git
 from threading import Thread
+from config import sync_interval
+from util import logger, my_request
 
-‘’‘
-TODO:
-
-’‘’
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler('tianyan.log')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s  - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
-
-logger.info('You can find this written in myLogs.log')
-
-def my_request(url, retry_time = 10):
-
-    r = requests.get(url)
+url_base = "https://novel.zhwenpg.com/"
 
 
-    if retry_time < 10:
+class Book:
+    # book_info example:{"name":"逍遥小散仙","author":"迷男","cover":"image/cover/kun6m7.jpg","book_url":"b.php?id=kun6m7","TOC":[["楔子","r.php?id=35482"]]]}
+    def __init__(self,book_info):
+        self.bool_info = book_info
+        self.name = book_info["name"]
+        self.author = book_info["name"]
+        self.boo_url = url_base + book_info["book_url"]
+        self.local_toc = self.get_local_toc()
 
-        logger.info("Retry Requests " + str(10- retry_time))
+    # 获取本地已经下载文件的最新一个章节，每个章节命令是[章节名，url]防止同名章节出现
+    # 用json保存下载完成的bookinfo
+    def get_local_toc(self):
+        logger.info("Loading Local TOC of Book" + self.name + self.author)
+        f_toc = open('./novel/' + self.name + '+' + self.author + '.json', 'r', encoding='utf-8')
+        data = json.load(f_toc)
+        f_toc.close()
+        if data:
+            return data
+        else:
+            data = self.bool_info
+            data["TOC"] = []
+            return data
 
-    if retry_time < 0:
+    def save_local_toc(self,):
+        f_toc = open('./novel/' + self.name + '+' + self.author + '.json', 'w', encoding='utf-8')
+        json.dump(self.local_toc, f_toc, ensure_ascii=False)
+        f_toc.close()
 
-        logger.info("Download False,Stop retry")
+    # 修改文件名字为name+author
+    def change_name(self):
+        pass
 
-        return 0
+    # 和云端目录进行比较，返回需要继续下载的目录，目前只从最后一节开始，不比较遗漏部分
+    def compare_with_remote(self):
+        logger.info("Gen Diff TOC of Book:" + self.name + self.author)
+        index = 0
+        if self.local_toc["TOC"]:
+            latest_chapter = self.local_toc["TOC"][-1]
+            if self.local_toc["TOC"][-1] in self.bool_info["TOC"]:
+                index = self.bool_info["TOC"].index(latest_chapter)
+        return self.bool_info["TOC"][index:]        # 返回目录列表
 
-    retry_time = retry_time-1
-    if r.status_code == 200:
+    def download(self):
+        f_book = open('./novel/' + self.name + '+' + self.author + '.txt', 'a', encoding='utf-8')
+        diff_toc = self.compare_with_remote()
+        for chapter in diff_toc:
+            logger.info("Downloading :" + self.name + ":" + chapter[0])
+            biaoti = '[color=#FF0000][b]' + chapter[0] + '[/b][/color]\n'
+            url = 'https://novel.zhwenpg.com/' + chapter[1]
+            data = my_request(url)
+            soup = BeautifulSoup(data, 'lxml')
+            text = soup.select('#tdcontent > span > p')
+            story = list()
+            story.append(biaoti)
+            for i in text:
+                story.append(i.text.replace(u'\u3000', u''))
+            story = '\n'.join(story)
+            story = story + '\n'
+            f_book.write(story)
+            self.local_toc["TOC"].append(chapter)
+            self.save_local_toc()
+        f_book.close()
+        logger.info("下载完成: " + self.name + '+' + self.author)
 
-        return r.text
-
-    else:
-
-        logger.info("Request Error, will retry later")
-
-        time.sleep(10)
-
-        return  my_request(url,retry_time-1)
 
 
-def get_book(page_num):
 
+# 书单生成器 每次返回一列书：[[书名，url后缀],]
+def booklists():
     url_base = "https://novel.zhwenpg.com/"
-
-    page_base = "https://novel.zhwenpg.com/?page="
-
-    book_list = list()
-
-    logger.info("正在获取第" + str(page_num) + "列书")
-
-    url = page_base + str(page_num)
-
-    data = my_request(url)
-
-    soup = BeautifulSoup(data, 'lxml')
-
-    for link in soup.select("table > tr > td > div > a"):
-
-        url = url_base + link['href']
-
-        book_list.append([link.div.text, url])      # 书名，url
-
-    return book_list
-
-
-already_have = ['一代大侠','九星毒奶','从火凤凰开始的特种兵','元尊','六朝燕歌行','剑来','剑耀九歌','北宋大丈夫','十景缎','反叛的大魔王','大国战隼','大数据修仙','大明天下','大明春色','天唐锦绣','姐夫的荣耀','学霸的黑科技系统','宿主','寒门状元','异能小神农','恐怖修仙世界','我师兄实在太稳健了','我有一座恐怖屋','我真没想重生啊','抢救大明朝','最强狂兵','民国谍影','江山云罗','特 拉福买家俱乐部','狂探','神话版三国','绝世战魂','舅妈的不伦亲情','芝加哥1990','萧齐艳史','诡秘之主','超神机械师','轮回乐 园','逍遥小散仙','锦绣江山传','鱼龙舞']
-
-def get_content(book_info):     # [name,url]
-
-    name = book_info[0]
-
-    url = book_info[1]
-    
-
-    if name in already_have:
-
-        return
-
-    logger.info("Start Download Book" + name)
-
-    data = my_request(url)
-
+    data = my_request(url_base)
     soup = BeautifulSoup(data,'lxml')
-
-    content = list()
-
-    for link in soup.select("#dulist > li > a[href]"):
-
-        tmp = [link.text,link['href']]
-
-        content.append(tmp)
-
-
-
-    content = [[x[0], 'https://novel.zhwenpg.com/' + x[1]] for x in content]
-
-
-    for i in soup.select("#revbtn"):      # 反转目录
-
-        if i.text == "正序":
-
-            content.reverse()
-
-    # logger.info(name + '的目录是')
-
-    # logger.info(content)
-
-    f = open('./txt/' + name + '.txt', 'a', encoding='utf-8')
-
-    for page in content:
-
-        logger.info("downloading :" + name +": " + page[0])
-
-        biaoti = '[color=#FF0000][b]' + page[0] +'[/b][/color]\n'
-
-        url = page[1]
-
+    max_page = int(soup.select(".pageidx > a ")[-1]["href"].split('=')[-1])
+    page_base = "https://novel.zhwenpg.com/?page="
+    for page_num in range(1,max_page+1):
+        logger.info("正在获取第" + str(page_num) + "列书")
+        url = page_base + str(page_num)
         data = my_request(url)
+        soup = BeautifulSoup(data, 'lxml')
+        book_list = list()
+        for link in soup.select("table > tr > td > div > a"):
+            book_list.append( [link.div.text, link['href']])# 书名，url
+        yield book_list
 
-        soup = BeautifulSoup(data,'lxml')
 
-        text = soup.select('#tdcontent > span > p')
+# 获取书籍信息,返回book_info
+def get_bookinfo(book):  # [name,url]
+    book_info = dict()
+    name = book[0]
+    url = book[1]
+    author = "无名氏"
+    cover = ""
+    logger.info("Start Download Book:" + name)
+    data = my_request(url_base + url)
+    soup = BeautifulSoup(data, 'lxml')
+    if soup.select(".fontwt"):
+        author = soup.select(".fontwt")[0].text
+    if soup.select(".ccover3"):
+        cover = soup.select(".ccover3")[0]["data-src"]
+    content = list()
+    for link in soup.select("#dulist > li > a[href]"):
+        tmp = [link.text, link['href']]
+        content.append(tmp)
+    for i in soup.select("#revbtn"):  # 反转目录
+        if i.text == "正序":
+            content.reverse()
+    # book_info example:{"name":"逍遥小散仙","author":"迷男","cover":"image/cover/kun6m7.jpg","book_url":"b.php?id=kun6m7","TOC":[["楔子","r.php?id=35482"]]]}
+    book_info["name"] = name
+    book_info["author"] = author
+    book_info["cover"] = cover
+    book_info["book_url"] = url
+    book_info["TOC"] = content
+    return book_info
 
-        story = list()
-
-        story.append(biaoti)
-
-        for i in text:
-
-            story.append(i.text.replace(u'\u3000', u''))
-
-        story = '\n'.join(story)
-
-        story = story + '\n'
-
-        f.write(story)
-
-    f.close()
-    logger.info("下载完成: " + name)
 
 
 
 if __name__ == "__main__":
-
-    max_page = 12
-
-    threads = []
-
-    for i in range(2,max_page+1):
-
-        books = get_book(i)
-
-        for book in books:
-
-            try:
-                if book[0] in already_have:
-                    logger.info(book[0] + "已经下载过了,跳过此书")
-                    continue
-
-                logger.info("Add Book" + book[0])
-
-                t = Thread(target=get_content, args=(book,))
-
-                threads.append(t)
-
-            except:
-
-                logger.error("无法创建线程")
-
-
-    n = 8
-
-    threads = [threads[i:i + n] for i in range(0, len(threads), n)]  # 切片成n个一组
-
-    for thread in threads:
-
-        [t.start() for t in thread]
-
-        [t.join()  for t in thread]
-
-
-
-
-
+    for booklist in booklists():
+        print(booklist)
+        for book in booklist:
+            tmp = get_bookinfo(book)
+            logger.info("book_info get")
+            f_toc = open('./novel/' + tmp["name"] + '+' + tmp['author'] + '.json', 'w', encoding='utf-8')
+            json.dump(tmp, f_toc, ensure_ascii=False)
+            f_toc.close()
