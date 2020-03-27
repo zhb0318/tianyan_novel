@@ -24,7 +24,7 @@ class Book:
 
     # book_info example:{"name":"逍遥小散仙","author":"迷男","cover":"image/cover/kun6m7.jpg","book_url":"b.php?id=kun6m7","TOC":[["楔子","r.php?id=35482"]]]}
 
-    def __init__(self,book_info):
+    def __init__(self, book_info):
 
         self.book_info = book_info
 
@@ -48,17 +48,13 @@ class Book:
 
         try:
 
-            f_toc = open('./novel/' + self.name + '+' + self.author + '.json', 'r', encoding='utf-8')
+            with open('./novel/' + self.name + '+' + self.author + '.json', 'r', encoding='utf-8') as f_toc:
 
-            data = json.load(f_toc)
+            	data = json.load(f_toc)
 
         except Exception:
 
             data = None
-
-        finally:
-
-            f_toc.close()
 
         if data:
 
@@ -74,7 +70,7 @@ class Book:
 
 
 
-    def save_local_toc(self,):
+    def save_local_toc(self, ):
 
         f_toc = open('./novel/' + self.name + '+' + self.author + '.json', 'w', encoding='utf-8')
 
@@ -108,13 +104,13 @@ class Book:
 
                 index = self.book_info["TOC"].index(latest_chapter)
 
-        result = self.book_info["TOC"][index+1:]
+        result = self.book_info["TOC"][index + 1:]
 
         if not result:
 
             logger.info("No Update in Book:" + self.name + self.author)
 
-        return result     # 返回目录列表
+        return result  # 返回目录列表
 
 
 
@@ -164,10 +160,6 @@ class Book:
 
 
 
-
-
-
-
 # 书单生成器 每次返回一列书：[[书名，url后缀],]
 
 def booklists():
@@ -176,13 +168,13 @@ def booklists():
 
     data = my_request(url_base)
 
-    soup = BeautifulSoup(data,'lxml')
+    soup = BeautifulSoup(data, 'lxml')
 
     max_page = int(soup.select(".pageidx > a ")[-1]["href"].split('=')[-1])
 
     page_base = "https://novel.zhwenpg.com/?page="
 
-    for page_num in range(1,max_page+1):
+    for page_num in range(1, max_page + 1):
 
         logger.info("正在获取第" + str(page_num) + "列书")
 
@@ -196,7 +188,7 @@ def booklists():
 
         for link in soup.select("table > tr > td > div > a"):
 
-            book_list.append( [link.div.text, link['href']])# 书名，url
+            book_list.append([link.div.text, link['href']])  # 书名，url
 
         yield book_list
 
@@ -274,19 +266,51 @@ def download_book(book_info):
 
 
 
+def push_remote():
+
+    try:
+
+        from git import Repo
+
+        import os
+
+        path = os.getcwd()
+
+        repo = Repo(path)
+
+        remote = repo.remote()
+
+        repo.git.add(all=True)
+
+        repo.index.commit("Update Latest Novel")
+
+        remote.push
+
+        logger.info("Push New Novel to Github Success")
+
+    except Exception:
+
+        logger.error("Error:Fail to Push to Github.")
+
+
+
+
+
 if __name__ == "__main__":
 
-    for booklist in booklists():
+    while True:
 
-        for book in booklist:
+        for booklist in booklists():
 
-            book_info = get_bookinfo(book)
+            for book in booklist:
 
-            download_book(book_info)
+                book_info = get_bookinfo(book)
 
+                download_book(book_info)
 
+            push_remote()
 
-
+        time.sleep(sync_interval)
 
 
 
