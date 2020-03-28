@@ -17,7 +17,15 @@ from util import logger, my_request
 url_base = "https://novel.zhwenpg.com/"
 
 
+"""
+import git
 
+import os, os.path
+
+g = git.Git(os.path.expanduser("~/git/GitPython"))
+
+result = g.execute(["git", "commit", "-m", "'message'"])
+"""
 
 
 class Book:
