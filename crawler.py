@@ -55,6 +55,7 @@ class Book:
         logger.info("Loading Local TOC of Book" + self.name + self.author)
 
         try:
+            data = None
 
             with open('./novel/' + self.name + '+' + self.author + '.json', 'r', encoding='utf-8') as f_toc:
 
@@ -73,12 +74,13 @@ class Book:
             data = self.book_info
 
             data["TOC"] = []
-
+            logger.info("Local TOC is empty")
+            print(data)
             return data
 
 
 
-    def save_local_toc(self, ):
+    def save_local_toc(self ):
 
         f_toc = open('./novel/' + self.name + '+' + self.author + '.json', 'w', encoding='utf-8')
 
