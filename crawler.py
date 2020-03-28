@@ -43,6 +43,10 @@ class Book:
         self.boo_url = url_base + book_info["book_url"]
 
         self.local_toc = self.get_local_toc()
+        if self.local_toc["TOC"] is None:
+            logger.info("云端书籍目录如下，本地目录为空")
+            logger.info(self.book_info)
+            self.save_local_toc()
 
 
 
@@ -74,8 +78,7 @@ class Book:
             data = self.book_info
 
             data["TOC"] = []
-            logger.info("Local TOC is empty")
-            print(data)
+            logger.info("Local TOC don't exist,will creat ti")
             return data
 
 
