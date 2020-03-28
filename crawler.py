@@ -283,6 +283,7 @@ def push_remote():
         repo.git.add(all=True)
 
         repo.index.commit("Update Latest Novel")
+        logger.info("Start Push New Commit to Github")
 
         remote.push()
 
