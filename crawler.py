@@ -284,7 +284,7 @@ def push_remote():
 
         repo.index.commit("Update Latest Novel")
 
-        remote.push
+        remote.push()
 
         logger.info("Push New Novel to Github Success")
 
