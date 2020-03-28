@@ -56,7 +56,7 @@ class Book:
 
     def get_local_toc(self):
 
-        logger.info("Loading Local TOC of Book" + self.name + self.author)
+        logger.info("Loading Local TOC of Book" + self.name + "+" + self.author)
 
         try:
             data = None
@@ -78,7 +78,7 @@ class Book:
             data = self.book_info
 
             data["TOC"] = []
-            logger.info("Local TOC don't exist,will creat ti")
+            logger.info("Local TOC don't exist,will creat it")
             return data
 
 
@@ -105,7 +105,7 @@ class Book:
 
     def compare_with_remote(self):
 
-        logger.info("Gen Diff TOC of Book:" + self.name + self.author)
+        logger.info("Gen Diff TOC of Book:" + self.name + "+" + self.author)
 
         index = 0
 
