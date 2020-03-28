@@ -1,5 +1,5 @@
 import json
-
+import copy
 from bs4 import BeautifulSoup
 
 import time
@@ -43,9 +43,8 @@ class Book:
         self.boo_url = url_base + book_info["book_url"]
 
         self.local_toc = self.get_local_toc()
-        if self.local_toc["TOC"] is None:
+        if not self.local_toc["TOC"]:
             logger.info("云端书籍目录如下，本地目录为空")
-            logger.info(self.book_info)
             self.save_local_toc()
 
 
@@ -59,7 +58,7 @@ class Book:
         logger.info("Loading Local TOC of Book" + self.name + "+" + self.author)
 
         try:
-            data = None
+            data = dict()
 
             with open('./novel/' + self.name + '+' + self.author + '.json', 'r', encoding='utf-8') as f_toc:
 
@@ -67,7 +66,7 @@ class Book:
 
         except Exception:
 
-            data = None
+            data = dict()
 
         if data:
 
@@ -75,16 +74,15 @@ class Book:
 
         else:
 
-            data = self.book_info
+            data = copy.deepcopy(self.book_info)
 
-            data["TOC"] = []
+            data["TOC"] = list()
             logger.info("Local TOC don't exist,will creat it")
             return data
 
 
 
-    def save_local_toc(self ):
-
+    def save_local_toc(self):
         f_toc = open('./novel/' + self.name + '+' + self.author + '.json', 'w', encoding='utf-8')
 
         json.dump(self.local_toc, f_toc, ensure_ascii=False)
