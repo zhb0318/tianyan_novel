@@ -104,6 +104,9 @@ class Book:
     def compare_with_remote(self):
 
         logger.info("Gen Diff TOC of Book:" + self.name + "+" + self.author)
+        if not self.local_toc["TOC"]:
+            logger.info("本地已下载为空，从头开始下载")
+            return self.book_info["TOC"]
 
         index = 0
 
