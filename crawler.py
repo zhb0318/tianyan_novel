@@ -188,7 +188,7 @@ def booklists():
 
     page_base = "https://novel.zhwenpg.com/?page="
 
-    for page_num in range(max_page,0,-1):
+    for page_num in range(1,max_page+1):
 
         logger.info("正在获取第" + str(page_num) + "列书")
 
@@ -323,7 +323,7 @@ if __name__ == "__main__":
 
                 download_book(book_info)
 
-            push_remote()
+        push_remote()
 
         time.sleep(sync_interval)
 

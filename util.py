@@ -38,7 +38,7 @@ def my_request(url, retry_time=5):
     i = 0
     while i < retry_time:
         try:
-            r = requests.get(url, timeout=10)
+            r = requests.get(url, timeout=30)
             if r.status_code == 200:
                 return r.text
             else:
