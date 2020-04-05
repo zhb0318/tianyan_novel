@@ -1,3 +1,6 @@
 *.log
 __pycache__
 tmp/
+util.py
+crawler.py
+config.py

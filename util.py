@@ -7,6 +7,9 @@ from threading import Thread
 import logging
 from config import *
 
+
+from xmlrpc.client import ServerProxy
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 # create file handler which logs even debug messages
@@ -33,6 +36,17 @@ def get_proxy():
     else:
         return None
 
+def rpc_request(url, retry_time=5):
+    server = ServerProxy("http://jupyter.niuhemoon.xyz:3030")
+    while True:
+        result = server.my_request(url)
+        if result not False:
+            return result
+        else:
+            logger.error("RPC requests Fail")
+            time.sleep(1024)
+            
+    
 
 def my_request(url, retry_time=5):
     i = 0
@@ -46,5 +60,8 @@ def my_request(url, retry_time=5):
         except:
             logger.info("Request Timeout, will retry later")
             i = i + 1
-            time.sleep(10)
+            time.sleep(30)
+            if i == 4:
+                logger.warning("多次尝试失败，休眠1024秒")
+                time.sleep(1024)
     logger.error("Request Error, url:" + url)
