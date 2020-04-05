@@ -188,7 +188,7 @@ def booklists():
 
     page_base = "https://novel.zhwenpg.com/?page="
 
-    for page_num in range(1,max_page+1):
+    for page_num in range(2,max_page+1,2):
 
         logger.info("正在获取第" + str(page_num) + "列书")
 
@@ -204,7 +204,7 @@ def booklists():
 
             book_list.append([link.div.text, link['href']])  # 书名，url
 
-        yield book_list
+        return book_list
 
 
 
