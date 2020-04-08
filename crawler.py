@@ -359,7 +359,7 @@ def booklists():
     page_base = "https://novel.zhwenpg.com/?page="
 
 
-    for page_num in range(max_page,8,-1):
+    for page_num in range(9,8,-1):
 
         book_list = list()
         logger.info("正在获取第" + str(page_num) + "列书")
