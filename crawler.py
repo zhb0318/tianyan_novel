@@ -1,4 +1,4 @@
-
+import git
  
 import requests
 
@@ -383,8 +383,34 @@ def booklists():
 
 
         yield book_list
+        
 
+def push_remote():
 
+    try:
+
+        from git import Repo
+
+        import os
+
+        path = os.getcwd()
+
+        repo = Repo(path)
+
+        remote = repo.remote()
+
+        repo.git.add(all=True)
+
+        repo.index.commit("Update Latest Novel")
+        logger.info("Start Push New Commit to Github")
+
+        remote.push()
+
+        logger.info("Push New Novel to Github Success")
+
+    except Exception:
+
+        logger.error("Error:Fail to Push to Github.")
 
 
 
@@ -420,60 +446,27 @@ def get_bookinfo(book):  # [name,url]
 
 
     if soup.select(".fontwt"):
-
-
         author = soup.select(".fontwt")[0].text
-
-
     if soup.select(".ccover3"):
-
-
         cover = soup.select(".ccover3")[0]["data-src"]
-
-
     content = list()
 
 
     for link in soup.select("#dulist > li > a[href]"):
-
-
         tmp = [link.text, link['href']]
-
-
         content.append(tmp)
 
 
     for i in soup.select("#revbtn"):  # 反转目录
-
-
         if i.text == "正序":
-
-
             content.reverse()
 
-
-    # book_info example:{"name":"逍遥小散仙","author":"迷男","cover":"image/cover/kun6m7.jpg","book_url":"b.php?id=kun6m7","TOC":[["楔子","r.php?id=35482"]]]}
-
-
     book_info["name"] = name
-
-
     book_info["author"] = author
-
-
     book_info["cover"] = cover
-
-
     book_info["book_url"] = url
-
-
     book_info["TOC"] = content
-
-
     return book_info
-
-
-
 
 
 
@@ -484,14 +477,6 @@ def download_book(book_info):
 
 
     book.download()
-
-
-
-
-
-
-
-
 
 
 
@@ -509,6 +494,7 @@ if __name__ == "__main__":
 
 
                 download_book(book_info)
+        push_remote()
         logger.info("END OF JOB,SLEEP A DAY")
         time.sleep(3600*24)
 
